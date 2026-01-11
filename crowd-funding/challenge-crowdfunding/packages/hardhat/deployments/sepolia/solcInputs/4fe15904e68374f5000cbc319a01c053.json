@@ -1,0 +1,36 @@
+{
+  "language": "Solidity",
+  "sources": {
+    "contracts/CrowdFund.sol": {
+      "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.4;\n\n\ninterface IFundingRecipient {\n    function complete() external payable;\n    \n  \n    function completed() external view returns (bool);\n}\n\n\ncontract CrowdFund {\n    \n    error NotOpenToWithdraw();\n    \n    \n    error WithdrawTransferFailed(address to, uint256 amount);\n    \n   \n    error TooEarly(uint256 deadline, uint256 currentTimestamp);\n    \n   \n    error AlreadyCompleted();\n    \n    \n    IFundingRecipient public fundingRecipient;\n    \n    bool public openToWithdraw;\n    \n   \n    uint256 public deadline = block.timestamp + 69 seconds;\n    \n  \n    uint256 public constant threshold = 1 ether;\n    \n    mapping(address => uint256) public balances;\n    \n   \n    event Contribution(address, uint256);\n    \n   \n    modifier notCompleted() {\n        if (fundingRecipient.completed()) revert AlreadyCompleted();\n        _;\n    }\n    \n    \n    constructor(address _fundingRecipient) {\n        fundingRecipient = IFundingRecipient(_fundingRecipient);\n    }\n   \n     \n    function contribute() public payable notCompleted {\n        balances[msg.sender] += msg.value;\n        emit Contribution(msg.sender, msg.value);\n    }\n    \n    \n    function withdraw() public notCompleted {\n        if (!openToWithdraw) revert NotOpenToWithdraw();\n        \n        uint256 balance = balances[msg.sender];\n        \n        balances[msg.sender] = 0;\n        \n        (bool success,) = msg.sender.call{value: balance}(\"\");\n        \n        if (!success) revert WithdrawTransferFailed(msg.sender, balance);\n    }\n    \n   \n    function execute() public notCompleted {\n      \n        if (block.timestamp <= deadline) {\n            revert TooEarly(deadline, block.timestamp);\n        }\n        \n     \n        if (address(this).balance >= threshold) {\n           \n            fundingRecipient.complete{value: address(this).balance}();\n        } else {\n       \n            openToWithdraw = true;\n        }\n    }\n    \n    \n    function timeLeft() public view returns (uint256) {\n        return deadline > block.timestamp ? deadline - block.timestamp : 0;\n    }\n    \n    receive() external payable {\n        contribute();\n    }\n}\n"
+    }
+  },
+  "settings": {
+    "optimizer": {
+      "enabled": true,
+      "runs": 200
+    },
+    "evmVersion": "paris",
+    "outputSelection": {
+      "*": {
+        "*": [
+          "abi",
+          "evm.bytecode",
+          "evm.deployedBytecode",
+          "evm.methodIdentifiers",
+          "metadata",
+          "devdoc",
+          "userdoc",
+          "storageLayout",
+          "evm.gasEstimates"
+        ],
+        "": [
+          "ast"
+        ]
+      }
+    },
+    "metadata": {
+      "useLiteralContent": true
+    }
+  }
+}
